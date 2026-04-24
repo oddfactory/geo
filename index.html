@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEO 콘텐츠 분석기</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        glass: 'rgba(255, 255, 255, 0.03)',
+                        glassBorder: 'rgba(255, 255, 255, 0.08)',
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glassmorphism {
+                @apply bg-glass backdrop-blur-xl border border-glassBorder rounded-2xl shadow-2xl;
+            }
+        }
+        body {
+            @apply bg-[#0f1115] text-gray-100 flex items-center justify-center min-h-screen m-0;
+            background-image: radial-gradient(circle at 30% 0%, rgba(56, 189, 248, 0.05) 0%, transparent 50%), 
+                              radial-gradient(circle at 70% 100%, rgba(167, 139, 250, 0.05) 0%, transparent 50%);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+        
+        textarea { outline: none; }
+    </style>
+    <!-- Chart.js & html2canvas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas"></script>
+</head>
+<body>
+    <div class="w-[1280px] h-[860px] flex gap-6 p-6">
+        
+        <!-- Left Panel: Input Area -->
+        <div class="flex-[1.1] glassmorphism flex flex-col p-8 bg-[#15181e]/80">
+            <div class="mb-6">
+                <h1 class="text-[32px] font-extrabold text-white tracking-tight mb-2 flex items-center gap-2">
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">GEO</span> 
+                    콘텐츠 분석기
+                </h1>
+                <p class="text-gray-400 text-[15px] leading-relaxed">
+                    작성 중인 문서가 생성형 AI 검색 엔진(ChatGPT, Claude 등)에 인용될 가능성을<br>
+                    실시간으로 진단하고 최적화 솔루션을 제안합니다.
+                </p>
+            </div>
+            
+            <div class="relative flex-1 flex flex-col">
+                <textarea id="inputBox" class="w-full flex-1 bg-black/30 text-gray-100 rounded-xl p-6 resize-none focus:ring-1 focus:ring-sky-500/50 border border-white/5 text-[17px] leading-[1.8] placeholder-gray-600 font-light" placeholder="여기에 상품 소개, 광고 카피, 블로그 본문을 입력하거나 붙여넣으세요.&#10;타이핑을 멈추면 자동으로 4가지 지표를 분석합니다."></textarea>
+                
+                <!-- Test cases -->
+                <div class="absolute bottom-4 right-4 flex gap-2">
+                    <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="good">우수 샘플</button>
+                    <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="structure">구조 샘플</button>
+                    <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="bad">미흡 샘플</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Results Area -->
+        <div id="resultPanel" class="flex-1 glassmorphism flex flex-col p-8 overflow-y-auto relative bg-[#13151a]">
+            
+            <!-- Empty State -->
+            <div id="emptyState" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#13151a]/95 backdrop-blur-md rounded-2xl transition-opacity duration-300">
+                <div class="w-20 h-20 mb-6 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg>
+                </div>
+                <p class="text-gray-300 text-lg font-bold mb-2">분석할 텍스트가 없습니다</p>
+                <p class="text-gray-500 text-sm">좌측에 콘텐츠를 입력하면 즉시 채점이 시작됩니다.</p>
+            </div>
+
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-6 shrink-0">
+                <div>
+                    <h2 class="text-[22px] font-bold text-gray-100 tracking-tight">AI 최적화 리포트</h2>
+                </div>
+                <button id="saveBtn" class="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm font-medium transition flex items-center gap-2 border border-white/10 text-gray-300 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    PNG로 저장
+                </button>
+            </div>
+
+            <!-- Total Score -->
+            <div class="flex flex-col items-center mb-8 shrink-0 relative py-6 bg-black/20 rounded-2xl border border-white/5">
+                <div class="text-[13px] font-bold text-gray-500 mb-1 uppercase tracking-[0.2em]">Overall Score</div>
+                <div id="totalScore" class="text-[84px] leading-none font-black transition-colors duration-500 text-gray-600">0</div>
+            </div>
+
+            <!-- Charts -->
+            <div class="flex gap-6 mb-8 shrink-0">
+                <div class="flex-1 h-[220px] relative">
+                    <canvas id="radarChart"></canvas>
+                </div>
+                <div class="flex-1 h-[220px] relative flex flex-col justify-end">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Suggestions -->
+            <div class="shrink-0 pb-4">
+                <h3 class="text-sm font-bold text-gray-400 mb-4 uppercase tracking-wider flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                    항목별 개선 제안
+                </h3>
+                <div id="suggestions" class="flex flex-col gap-3">
+                    <!-- Dynamic suggestions injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Dictionaries
+        const DICTS = {
+            authority: ["대학", "연구소", "통계청", "한국은행", "McKinsey", "Gartner", "정부", "위원회", "논문", "저널", "포브스", "가트너", "맥킨지", "KOSIS", "식약처", "WHO", "통계", "리서치"],
+            citationPhrases: ["에 따르면", "의 조사", "연구에서", "밝혔다", "보고서에", "발표한", "설문 결과", "조사 결과", "통계에 의하면"],
+            jargon: [
+                "B2B", "B2C", "ROI", "KPI", "SEO", "GEO", "LLM", "RAG", "CTR", "전환율", "이탈률", "MAU", "DAU", 
+                "클라우드", "온프레미스", "SaaS", "PaaS", "IaaS", "API", "SDK", "프레임워크", "알고리즘", "인사이트",
+                "페르소나", "시너지", "레버리지", "어질리티", "옴니채널", "퍼포먼스", "리텐션", "LTV", "CAC", "퍼널", "트래픽"
+            ],
+            casualWords: ["너무", "정말", "대박", "완전", "진짜", "엄청", "짱", "미친", "개좋", "헐", "ㅠㅠ", "ㅋㅋ"],
+            authorCredit: ["필자", "본 글에서는", "저자는", "본 문서", "작성자", "본 보고서"]
+        };
+
+        // Chart Instances
+        let radarInstance = null;
+        let barInstance = null;
+
+        // Colors
+        Chart.defaults.color = '#6b7280';
+        Chart.defaults.font.family = "'Pretendard', sans-serif";
+
+        function getColorObj(score) {
+            if (score >= 70) return { text: 'text-sky-400', border: 'border-sky-400/20', bg: 'bg-sky-400/10', hex: '#38bdf8' }; // Sky-blue
+            if (score >= 40) return { text: 'text-orange-400', border: 'border-orange-400/20', bg: 'bg-orange-400/10', hex: '#fb923c' }; // Orange
+            return { text: 'text-rose-500', border: 'border-rose-500/20', bg: 'bg-rose-500/10', hex: '#f43f5e' }; // Rose-red
+        }
+
+        function initCharts() {
+            const radarCtx = document.getElementById('radarChart').getContext('2d');
+            radarInstance = new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['통계', '인용', '구조', '전문성'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: 'rgba(107, 114, 128, 0.2)',
+                        borderColor: '#6b7280',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#6b7280',
+                        pointBorderColor: '#13151a',
+                        pointRadius: 4,
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            min: 0, max: 100,
+                            ticks: { display: false, stepSize: 25 },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)', circular: true },
+                            angleLines: { color: 'rgba(255, 255, 255, 0.05)' },
+                            pointLabels: { font: { size: 13, weight: '600' }, color: '#9ca3af' }
+                        }
+                    },
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    maintainAspectRatio: false
+                }
+            });
+
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            barInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['통계', '인용', '구조', '전문성'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: '#6b7280',
+                        borderRadius: 6,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { min: 0, max: 100, grid: { color: 'rgba(255, 255, 255, 0.05)' }, border: { display: false } },
+                        x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 12 } } }
+                    },
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // Scoring Engine
+        function analyzeText(text) {
+            const length = text.length;
+            
+            // 1. 통계 (Statistics)
+            const statRegex = [
+                /\d+(?:\.\d+)?\s*%/g,
+                /(?:\$|₩|￦|€)?\d{1,3}(?:,\d{3})+(?:원|달러|불)?/g,
+                /(?:19|20)\d{2}\s*년?/g,
+                /\d+(?:\.\d+)?\s*배/g,
+                /\d+\s*(명|건|회|개|위|점)/g
+            ];
+
+            let statCount = 0;
+            statRegex.forEach(regex => {
+                const matches = text.match(regex) || [];
+                statCount += matches.length;
+            });
+            const rawStat = (statCount / (length || 1)) * 100;
+            const statScore = Math.min(100, (rawStat / 3) * 100);
+
+            // 2. 인용 (Citations)
+            let citScore = 0;
+            const urls = text.match(/https?:\/\/[^\s]+/g) || [];
+            citScore += urls.length * 15;
+
+            DICTS.citationPhrases.forEach(phrase => {
+                citScore += (text.split(phrase).length - 1) * 12;
+            });
+            DICTS.authority.forEach(keyword => {
+                citScore += (text.split(keyword).length - 1) * 8;
+            });
+            const yearSource = text.match(/\d{4}년.*?(발표|보고|조사)/g) || [];
+            citScore += yearSource.length * 10;
+            citScore = Math.min(100, citScore);
+
+            // 3. 구조 (Structure)
+            let strScore = 0;
+            strScore += (text.match(/^#{1,3}\s+/gm) || []).length * 10;
+            strScore += Math.min(30, (text.match(/^[-*•]\s+/gm) || []).length * 5);
+            strScore += Math.min(20, (text.match(/^\d+\.\s+/gm) || []).length * 5);
+            if (/(FAQ|자주 묻는 질문|Q:|A:)/i.test(text)) strScore += 15;
+            if (/(TL;DR|요약|핵심 정리)/i.test(text)) strScore += 15;
+
+            const paragraphs = text.split(/\n+/).filter(p => p.trim().length > 0);
+            if (paragraphs.length > 1) {
+                const lengths = paragraphs.map(p => p.length);
+                const avgLen = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+                const variance = lengths.reduce((a, b) => a + Math.pow(b - avgLen, 2), 0) / lengths.length;
+                if (Math.sqrt(variance) < 100) strScore += 10;
+            }
+            strScore = Math.min(100, strScore);
+
+            // 4. 전문성 (Expertise)
+            let expScore = 50; // Baseline
+            DICTS.jargon.forEach(word => {
+                expScore += (text.split(word).length - 1) * 3;
+            });
+            DICTS.casualWords.forEach(word => {
+                expScore -= (text.split(word).length - 1) * 4;
+            });
+            let creditCount = 0;
+            DICTS.authorCredit.forEach(word => {
+                creditCount += (text.split(word).length - 1);
+            });
+            if (creditCount > 0) expScore += 10;
+
+            const sentences = text.split(/[.?!]\s/).filter(s => s.trim().length > 0);
+            if (sentences.length > 0) {
+                const avgSentLen = sentences.reduce((a, b) => a + b.length, 0) / sentences.length;
+                if (avgSentLen >= 30 && avgSentLen <= 60) expScore += 20;
+            }
+
+            const firstPersonCount = (text.match(/제가|저는|나의|내가|나는/g) || []).length;
+            if (firstPersonCount > 3) expScore -= (firstPersonCount - 3) * 2;
+            expScore = Math.max(0, Math.min(100, expScore));
+
+            const totalScore = Math.round((statScore + citScore + strScore + expScore) / 4);
+
+            return {
+                scores: [Math.round(statScore), Math.round(citScore), Math.round(strScore), Math.round(expScore)],
+                total: totalScore
+            };
+        }
+
+        // Render UI
+        function updateUI(results) {
+            const emptyState = document.getElementById('emptyState');
+            const scoreEl = document.getElementById('totalScore');
+            const sugContainer = document.getElementById('suggestions');
+
+            if (!results) {
+                emptyState.style.opacity = '1';
+                emptyState.style.pointerEvents = 'auto';
+                return;
+            }
+
+            emptyState.style.opacity = '0';
+            emptyState.style.pointerEvents = 'none';
+
+            const { scores, total } = results;
+            const mainColor = getColorObj(total);
+
+            // Update Total Score Number & Color
+            scoreEl.textContent = total;
+            scoreEl.className = `text-[84px] leading-none font-black transition-colors duration-500 ${mainColor.text}`;
+
+            // Update Charts
+            radarInstance.data.datasets[0].data = scores;
+            radarInstance.data.datasets[0].borderColor = mainColor.hex;
+            radarInstance.data.datasets[0].backgroundColor = mainColor.hex + '25';
+            radarInstance.data.datasets[0].pointBackgroundColor = mainColor.hex;
+            radarInstance.update();
+
+            // Setup bar colors per axis based on its own score
+            const barColors = scores.map(s => getColorObj(s).hex);
+            barInstance.data.datasets[0].data = scores;
+            barInstance.data.datasets[0].backgroundColor = barColors;
+            barInstance.update();
+
+            // Update Suggestions
+            const labels = ['통계 (Statistics)', '인용 (Citations)', '구조 (Structure)', '전문성 (Expertise)'];
+            sugContainer.innerHTML = '';
+            
+            scores.forEach((score, idx) => {
+                const c = getColorObj(score);
+                let text = '';
+                if (idx === 0) {
+                    text = score < 40 ? "수치나 데이터가 부족합니다. 퍼센트(%), 금액, 연도 등을 추가해 주장을 뒷받침하세요." :
+                           score < 70 ? "통계 자료가 일부 포함되어 있습니다. 구체적인 수치를 더 추가하면 신뢰도가 높아집니다." :
+                           "충분한 통계 데이터가 포함되어 있어 주장의 근거가 탄탄합니다.";
+                } else if (idx === 1) {
+                    text = score < 40 ? "URL이나 출처 표기가 없습니다. 신뢰할 만한 기관명이나 링크를 1개 이상 추가해 보세요." :
+                           score < 70 ? "일부 인용이 포함되어 있습니다. '~에 따르면'과 같은 출처 언급을 늘리면 좋습니다." :
+                           "명확한 출처와 인용이 포함되어 AI가 신뢰도 높은 정보로 인식하기 좋습니다.";
+                } else if (idx === 2) {
+                    text = score < 40 ? "글의 구조가 단조롭습니다. 헤딩(#)이나 리스트를 사용해 가독성을 높이세요." :
+                           score < 70 ? "기본적인 구조를 갖췄습니다. 요약 섹션이나 FAQ를 추가하면 발췌되기 더 쉬워집니다." :
+                           "헤딩과 리스트가 적절히 사용되어 구조가 명확하고 기계가 읽기 매우 좋습니다.";
+                } else {
+                    text = score < 40 ? "전문성이 부족해 보일 수 있습니다. 감탄사를 줄이고 도메인 전문 용어를 활용해 보세요." :
+                           score < 70 ? "무난한 어투입니다. 전문 용어를 조금 더 활용하거나 문장 길이를 균형 있게 조절해 보세요." :
+                           "전문 용어가 잘 포함되었고 객관적인 어투를 유지하여 E-E-A-T 관점에서 유리합니다.";
+                }
+
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-xl bg-[#0f1115]/50 border ${c.border} text-[14px] text-gray-300 flex flex-col gap-1.5 transition-all`;
+                div.innerHTML = `<div class="font-bold tracking-wide text-[13px] ${c.text} flex justify-between items-center">
+                    <span>${labels[idx]}</span>
+                    <span class="bg-black/30 px-2 py-0.5 rounded-md">${score}점</span>
+                </div>
+                <p class="leading-relaxed opacity-90">${text}</p>`;
+                sugContainer.appendChild(div);
+            });
+        }
+
+        // Debounce utility
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+
+            const inputBox = document.getElementById('inputBox');
+            inputBox.addEventListener('input', debounce((e) => {
+                const text = e.target.value;
+                if (text.trim() === '') {
+                    updateUI(null);
+                } else {
+                    const results = analyzeText(text);
+                    updateUI(results);
+                }
+            }, 300));
+
+            // Test Buttons
+            document.querySelectorAll('.test-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const type = e.target.dataset.type;
+                    if (type === 'good') {
+                        inputBox.value = "본 보고서는 2024년 글로벌 클라우드 시장 동향을 분석한다. Gartner의 조사 결과에 따르면, B2B SaaS 시장은 전년 대비 42% 성장하여 1,500억 달러 규모에 도달했다. 이는 AI와 LLM 기술의 적극적인 도입이 ROI를 3.5배 이상 끌어올린 결과로 분석된다. \n\n## 주요 통계\n- 클라우드 전환율: 65%\n- 평균 비용 절감: 20%\n\n필자는 이러한 트렌드가 향후 5년간 지속될 것으로 전망한다. 자세한 내용은 https://example.com 에서 확인할 수 있다.";
+                    } else if (type === 'bad') {
+                        inputBox.value = "오늘 새로 나온 화장품 써봤는데 진짜 완전 대박이에요 ㅠㅠ 너무 촉촉하고 짱 좋음!!! 제가 원래 피부가 예민한 편인데 이건 미친 듯이 순해요. 가격도 착하고 완전 강추합니다! 다들 꼭 사보세요 제발요 ㅠㅠ ㅋㅋ";
+                    } else if (type === 'structure') {
+                        inputBox.value = "## SEO 최적화 가이드\n\n이 문서는 SEO 최적화를 위한 핵심 원칙을 설명합니다.\n\n### TL;DR (요약)\n검색 엔진 단조롭습니다. 헤딩(#)이나 리스트를 사용해 가독성을 높이세요.\n\n### 주요 체크리스트\n1. 메타 태그 작성\n2. 키워드 밀도 유지\n3. 모바일 친화성 확보\n\n### FAQ\nQ: 얼마나 자주 업데이트해야 하나요?\nA: 최소 주 1회 권장합니다.\n\n이러한 원칙을 지키면 검색 결과에서 더 높은 순위를 기대할 수 있습니다.";
+                    }
+                    inputBox.dispatchEvent(new Event('input'));
+                });
+            });
+
+            // Save as PNG
+            document.getElementById('saveBtn').addEventListener('click', () => {
+                const panel = document.getElementById('resultPanel');
+                // Temporarily adjust styles for perfect capture
+                const origOverflow = panel.style.overflowY;
+                panel.style.overflowY = 'visible';
+                
+                html2canvas(panel, {
+                    backgroundColor: '#13151a',
+                    scale: 2,
+                    windowHeight: panel.scrollHeight
+                }).then(canvas => {
+                    panel.style.overflowY = origOverflow;
+                    const link = document.createElement('a');
+                    link.download = `geo-analyzer-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 15)}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            });
+        });
+    </script>
+</body>
+</html>
