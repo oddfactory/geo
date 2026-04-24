@@ -28,6 +28,11 @@
             .glassmorphism {
                 @apply bg-glass backdrop-blur-xl border border-glassBorder rounded-2xl shadow-2xl;
             }
+            .neon-ai {
+                box-shadow: 0 0 30px rgba(56, 189, 248, 0.15), 0 0 60px rgba(167, 139, 250, 0.1);
+                border-color: rgba(167, 139, 250, 0.4) !important;
+                transition: all 0.5s ease;
+            }
         }
         body {
             @apply bg-[#0f1115] text-gray-100 flex items-center justify-center min-h-screen m-0;
@@ -63,11 +68,31 @@
                 </p>
             </div>
             
-            <div class="relative flex-1 flex flex-col">
-                <textarea id="inputBox" class="w-full flex-1 bg-black/30 text-gray-100 rounded-xl p-6 resize-none focus:ring-1 focus:ring-sky-500/50 border border-white/5 text-[17px] leading-[1.8] placeholder-gray-600 font-light" placeholder="여기에 상품 소개, 광고 카피, 블로그 본문을 입력하거나 붙여넣으세요.&#10;타이핑을 멈추면 자동으로 4가지 지표를 분석합니다."></textarea>
+            <div class="relative flex-1 flex flex-col gap-4">
+                <textarea id="inputBox" class="w-full flex-1 bg-black/30 text-gray-100 rounded-xl p-6 resize-none focus:ring-1 focus:ring-sky-500/50 border border-white/5 text-[17px] leading-[1.8] placeholder-gray-600 font-light" placeholder="여기에 상품 소개, 광고 카피, 블로그 본문을 입력하거나 붙여넣으세요.&#10;분석하기 버튼을 누르면 설정된 모드에 따라 평가를 진행합니다."></textarea>
+                
+                <!-- Controls: AI Toggle and Button -->
+                <div class="flex items-center justify-between bg-black/20 p-4 rounded-xl border border-white/5">
+                    <label class="flex items-center cursor-pointer gap-3">
+                        <div class="relative">
+                            <input type="checkbox" id="aiToggle" class="sr-only">
+                            <div class="block bg-gray-700 w-12 h-7 rounded-full transition-colors duration-300" id="toggleBg"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition transform duration-300" id="toggleDot"></div>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[14px] font-bold text-gray-300" id="aiLabel">AI 정밀 분석 비활성화</span>
+                            <span class="text-[12px] text-gray-500">Gemini 1.5 Flash 엔진</span>
+                        </div>
+                    </label>
+
+                    <button id="analyzeBtn" class="px-6 py-2.5 bg-sky-500 hover:bg-sky-400 text-white font-bold rounded-lg transition-all shadow-lg shadow-sky-500/20 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <span id="btnText">분석 실행하기</span>
+                    </button>
+                </div>
                 
                 <!-- Test cases -->
-                <div class="absolute bottom-4 right-4 flex gap-2">
+                <div class="absolute right-4 flex gap-2" style="bottom: 90px;">
                     <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="good">우수 샘플</button>
                     <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="structure">구조 샘플</button>
                     <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="bad">미흡 샘플</button>
@@ -295,7 +320,7 @@
         }
 
         // Render UI
-        function updateUI(results) {
+        function updateUI(results, isAI = false, advice = "") {
             const emptyState = document.getElementById('emptyState');
             const scoreEl = document.getElementById('totalScore');
             const sugContainer = document.getElementById('suggestions');
@@ -333,45 +358,77 @@
             const labels = ['통계 (Statistics)', '인용 (Citations)', '구조 (Structure)', '전문성 (Expertise)'];
             sugContainer.innerHTML = '';
             
-            scores.forEach((score, idx) => {
-                const c = getColorObj(score);
-                let text = '';
-                if (idx === 0) {
-                    text = score < 40 ? "수치나 데이터가 부족합니다. 퍼센트(%), 금액, 연도 등을 추가해 주장을 뒷받침하세요." :
-                           score < 70 ? "통계 자료가 일부 포함되어 있습니다. 구체적인 수치를 더 추가하면 신뢰도가 높아집니다." :
-                           "충분한 통계 데이터가 포함되어 있어 주장의 근거가 탄탄합니다.";
-                } else if (idx === 1) {
-                    text = score < 40 ? "URL이나 출처 표기가 없습니다. 신뢰할 만한 기관명이나 링크를 1개 이상 추가해 보세요." :
-                           score < 70 ? "일부 인용이 포함되어 있습니다. '~에 따르면'과 같은 출처 언급을 늘리면 좋습니다." :
-                           "명확한 출처와 인용이 포함되어 AI가 신뢰도 높은 정보로 인식하기 좋습니다.";
-                } else if (idx === 2) {
-                    text = score < 40 ? "글의 구조가 단조롭습니다. 헤딩(#)이나 리스트를 사용해 가독성을 높이세요." :
-                           score < 70 ? "기본적인 구조를 갖췄습니다. 요약 섹션이나 FAQ를 추가하면 발췌되기 더 쉬워집니다." :
-                           "헤딩과 리스트가 적절히 사용되어 구조가 명확하고 기계가 읽기 매우 좋습니다.";
-                } else {
-                    text = score < 40 ? "전문성이 부족해 보일 수 있습니다. 감탄사를 줄이고 도메인 전문 용어를 활용해 보세요." :
-                           score < 70 ? "무난한 어투입니다. 전문 용어를 조금 더 활용하거나 문장 길이를 균형 있게 조절해 보세요." :
-                           "전문 용어가 잘 포함되었고 객관적인 어투를 유지하여 E-E-A-T 관점에서 유리합니다.";
-                }
-
+            if (isAI && advice) {
                 const div = document.createElement('div');
-                div.className = `p-4 rounded-xl bg-[#0f1115]/50 border ${c.border} text-[14px] text-gray-300 flex flex-col gap-1.5 transition-all`;
-                div.innerHTML = `<div class="font-bold tracking-wide text-[13px] ${c.text} flex justify-between items-center">
-                    <span>${labels[idx]}</span>
-                    <span class="bg-black/30 px-2 py-0.5 rounded-md">${score}점</span>
-                </div>
-                <p class="leading-relaxed opacity-90">${text}</p>`;
+                div.className = `p-5 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 text-[14.5px] text-gray-200 leading-relaxed shadow-inner`;
+                div.innerHTML = `<div class="font-bold text-indigo-400 mb-2.5 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> AI 종합 피드백 (Gemini)</div>
+                <p>${advice.replace(/\n/g, '<br>')}</p>`;
                 sugContainer.appendChild(div);
-            });
+            } else {
+                scores.forEach((score, idx) => {
+                    const c = getColorObj(score);
+                    let text = '';
+                    if (idx === 0) {
+                        text = score < 40 ? "수치나 데이터가 부족합니다. 퍼센트(%), 금액, 연도 등을 추가해 주장을 뒷받침하세요." :
+                               score < 70 ? "통계 자료가 일부 포함되어 있습니다. 구체적인 수치를 더 추가하면 신뢰도가 높아집니다." :
+                               "충분한 통계 데이터가 포함되어 있어 주장의 근거가 탄탄합니다.";
+                    } else if (idx === 1) {
+                        text = score < 40 ? "URL이나 출처 표기가 없습니다. 신뢰할 만한 기관명이나 링크를 1개 이상 추가해 보세요." :
+                               score < 70 ? "일부 인용이 포함되어 있습니다. '~에 따르면'과 같은 출처 언급을 늘리면 좋습니다." :
+                               "명확한 출처와 인용이 포함되어 AI가 신뢰도 높은 정보로 인식하기 좋습니다.";
+                    } else if (idx === 2) {
+                        text = score < 40 ? "글의 구조가 단조롭습니다. 헤딩(#)이나 리스트를 사용해 가독성을 높이세요." :
+                               score < 70 ? "기본적인 구조를 갖췄습니다. 요약 섹션이나 FAQ를 추가하면 발췌되기 더 쉬워집니다." :
+                               "헤딩과 리스트가 적절히 사용되어 구조가 명확하고 기계가 읽기 매우 좋습니다.";
+                    } else {
+                        text = score < 40 ? "전문성이 부족해 보일 수 있습니다. 감탄사를 줄이고 도메인 전문 용어를 활용해 보세요." :
+                               score < 70 ? "무난한 어투입니다. 전문 용어를 조금 더 활용하거나 문장 길이를 균형 있게 조절해 보세요." :
+                               "전문 용어가 잘 포함되었고 객관적인 어투를 유지하여 E-E-A-T 관점에서 유리합니다.";
+                    }
+
+                    const div = document.createElement('div');
+                    div.className = `p-4 rounded-xl bg-[#0f1115]/50 border ${c.border} text-[14px] text-gray-300 flex flex-col gap-1.5 transition-all`;
+                    div.innerHTML = `<div class="font-bold tracking-wide text-[13px] ${c.text} flex justify-between items-center">
+                        <span>${labels[idx]}</span>
+                        <span class="bg-black/30 px-2 py-0.5 rounded-md">${score}점</span>
+                    </div>
+                    <p class="leading-relaxed opacity-90">${text}</p>`;
+                    sugContainer.appendChild(div);
+                });
+            }
         }
 
-        // Debounce utility
-        function debounce(func, wait) {
-            let timeout;
-            return function(...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(this, args), wait);
-            };
+        // Gemini API Configuration
+        const GEMINI_API_KEY = 'AIzaSyD5nGxBrEmIzBAsRJo_VW2Hmv5txl3YT6o';
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+
+        async function fetchGeminiAnalysis(text) {
+            const prompt = `당신은 GEO 전문가입니다. 입력된 텍스트를 [통계, 인용, 구조, 전문성] 4개 지표로 분석하여 각각 0~100점 사이로 채점하고, 종합 조언(advice)을 포함해 반드시 JSON 형식 { "stat": 0, "cite": 0, "struct": 0, "prof": 0, "advice": "" }으로만 응답하세요.\n\n분석할 텍스트:\n${text}`;
+            
+            const response = await fetch(GEMINI_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { responseMimeType: "application/json" }
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                console.error('API Error Response:', errorData);
+                // Fallback to latest flash if 1.5-flash-latest also fails (API version changes over time)
+                if (response.status === 404) {
+                    throw new Error('MODEL_NOT_FOUND');
+                }
+                throw new Error('API request failed');
+            }
+            const data = await response.json();
+            let resultText = data.candidates[0].content.parts[0].text;
+            
+            // Clean up Markdown JSON formatting if present
+            resultText = resultText.replace(/```json\s*/, '').replace(/```\s*$/, '').trim();
+            return JSON.parse(resultText);
         }
 
         // Event Listeners
@@ -379,15 +436,65 @@
             initCharts();
 
             const inputBox = document.getElementById('inputBox');
-            inputBox.addEventListener('input', debounce((e) => {
-                const text = e.target.value;
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const btnText = document.getElementById('btnText');
+            const aiToggle = document.getElementById('aiToggle');
+            const toggleBg = document.getElementById('toggleBg');
+            const toggleDot = document.getElementById('toggleDot');
+            const aiLabel = document.getElementById('aiLabel');
+            const resultPanel = document.getElementById('resultPanel');
+
+            // Toggle AI Mode UI
+            aiToggle.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    toggleBg.classList.replace('bg-gray-700', 'bg-indigo-500');
+                    toggleDot.classList.add('translate-x-5');
+                    aiLabel.textContent = 'AI 정밀 분석 활성화됨';
+                    aiLabel.classList.replace('text-gray-300', 'text-indigo-400');
+                    resultPanel.classList.add('neon-ai');
+                } else {
+                    toggleBg.classList.replace('bg-indigo-500', 'bg-gray-700');
+                    toggleDot.classList.remove('translate-x-5');
+                    aiLabel.textContent = 'AI 정밀 분석 비활성화';
+                    aiLabel.classList.replace('text-indigo-400', 'text-gray-300');
+                    resultPanel.classList.remove('neon-ai');
+                }
+            });
+
+            // Analyze Button Logic
+            analyzeBtn.addEventListener('click', async () => {
+                const text = inputBox.value;
                 if (text.trim() === '') {
                     updateUI(null);
-                } else {
-                    const results = analyzeText(text);
-                    updateUI(results);
+                    return;
                 }
-            }, 300));
+
+                if (aiToggle.checked) {
+                    // AI Mode
+                    analyzeBtn.disabled = true;
+                    analyzeBtn.classList.add('opacity-70', 'cursor-not-allowed');
+                    btnText.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> AI가 문맥을 읽는 중...';
+
+                    try {
+                        const jsonResult = await fetchGeminiAnalysis(text);
+                        const scores = [jsonResult.stat, jsonResult.cite, jsonResult.struct, jsonResult.prof];
+                        const totalScore = Math.round(scores.reduce((a, b) => a + b, 0) / 4);
+                        
+                        updateUI({ scores, total: totalScore }, true, jsonResult.advice);
+                    } catch (error) {
+                        console.error(error);
+                        alert("AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+                    } finally {
+                        analyzeBtn.disabled = false;
+                        analyzeBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                        btnText.textContent = '분석 실행하기';
+                    }
+                } else {
+                    // Rule-based Mode
+                    const results = analyzeText(text);
+                    updateUI(results, false);
+                }
+            });
 
             // Test Buttons
             document.querySelectorAll('.test-btn').forEach(btn => {
@@ -400,7 +507,6 @@
                     } else if (type === 'structure') {
                         inputBox.value = "## SEO 최적화 가이드\n\n이 문서는 SEO 최적화를 위한 핵심 원칙을 설명합니다.\n\n### TL;DR (요약)\n검색 엔진 단조롭습니다. 헤딩(#)이나 리스트를 사용해 가독성을 높이세요.\n\n### 주요 체크리스트\n1. 메타 태그 작성\n2. 키워드 밀도 유지\n3. 모바일 친화성 확보\n\n### FAQ\nQ: 얼마나 자주 업데이트해야 하나요?\nA: 최소 주 1회 권장합니다.\n\n이러한 원칙을 지키면 검색 결과에서 더 높은 순위를 기대할 수 있습니다.";
                     }
-                    inputBox.dispatchEvent(new Event('input'));
                 });
             });
 
