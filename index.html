@@ -48,9 +48,10 @@
         
         textarea { outline: none; }
     </style>
-    <!-- Chart.js & html2canvas -->
+    <!-- Chart.js & html2canvas & jsPDF -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div class="w-[1280px] h-[860px] flex gap-6 p-6">
@@ -117,10 +118,6 @@
                 <div>
                     <h2 class="text-[22px] font-bold text-gray-100 tracking-tight">AI 최적화 리포트</h2>
                 </div>
-                <button id="saveBtn" class="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm font-medium transition flex items-center gap-2 border border-white/10 text-gray-300 hover:text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    PNG로 저장
-                </button>
             </div>
 
             <!-- Total Score -->
@@ -140,15 +137,62 @@
             </div>
 
             <!-- Suggestions -->
-            <div class="shrink-0 pb-4">
+            <div class="shrink-0 pb-4 flex flex-col flex-1">
                 <h3 class="text-sm font-bold text-gray-400 mb-4 uppercase tracking-wider flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                     항목별 개선 제안
                 </h3>
-                <div id="suggestions" class="flex flex-col gap-3">
+                <div id="suggestions" class="flex flex-col gap-3 mb-6">
                     <!-- Dynamic suggestions injected here -->
                 </div>
+                
+                <!-- Export Action Buttons -->
+                <div class="flex gap-3 pt-4 border-t border-white/10 mt-auto">
+                    <button id="savePngBtn" class="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[13px] font-bold transition flex items-center justify-center gap-2 border border-white/10 text-gray-300 hover:text-white group">
+                        <svg class="text-sky-400 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        PNG 저장
+                    </button>
+                    <button id="savePdfBtn" class="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[13px] font-bold transition flex items-center justify-center gap-2 border border-white/10 text-gray-300 hover:text-white group">
+                        <svg class="text-indigo-400 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        PDF 리포트
+                    </button>
+                    <button id="saveJsonBtn" class="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-[13px] font-bold transition flex items-center justify-center gap-2 border border-white/10 text-gray-300 hover:text-white group">
+                        <svg class="text-orange-400 group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                        JSON 데이터
+                    </button>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Hidden PDF Report Template -->
+    <div id="pdfTemplate" class="absolute top-[-9999px] left-[-9999px] w-[800px] bg-white text-gray-900 p-10 hidden">
+        <div class="border-b-2 border-gray-900 pb-6 mb-8 flex justify-between items-end">
+            <div>
+                <h1 class="text-3xl font-black text-gray-900 mb-2">GEO 분석 결과 보고서</h1>
+                <p class="text-gray-500 font-medium" id="pdfDate">2026-04-24</p>
+            </div>
+            <div class="text-right">
+                <div class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Total Score</div>
+                <div class="text-5xl font-black text-sky-600 leading-none" id="pdfTotalScore">0</div>
+            </div>
+        </div>
+
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 border-l-4 border-sky-500 pl-3">원본 텍스트</h2>
+            <div class="bg-gray-50 p-6 rounded-lg text-[15px] leading-relaxed text-gray-700 whitespace-pre-wrap break-words border border-gray-200" id="pdfOriginalText"></div>
+        </div>
+
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 border-l-4 border-indigo-500 pl-3">지표별 점수</h2>
+            <div class="grid grid-cols-2 gap-4" id="pdfScoreBars">
+                <!-- Bars injected via JS -->
+            </div>
+        </div>
+
+        <div>
+            <h2 class="text-xl font-bold text-gray-800 mb-4 border-l-4 border-purple-500 pl-3">AI 최적화 가이드</h2>
+            <div class="bg-purple-50 p-6 rounded-lg text-[15px] leading-relaxed text-gray-800 border border-purple-100" id="pdfAdviceText"></div>
         </div>
     </div>
 
@@ -319,17 +363,31 @@
             };
         }
 
+        // Global state for exports
+        let currentReportData = { timestamp: "", original_text: "", scores: null, total: 0, ai_advice: "" };
+
         // Render UI
         function updateUI(results, isAI = false, advice = "") {
             const emptyState = document.getElementById('emptyState');
             const scoreEl = document.getElementById('totalScore');
             const sugContainer = document.getElementById('suggestions');
+            const inputBox = document.getElementById('inputBox');
 
             if (!results) {
                 emptyState.style.opacity = '1';
                 emptyState.style.pointerEvents = 'auto';
+                currentReportData.scores = null;
                 return;
             }
+
+            // Save global state
+            currentReportData = {
+                timestamp: new Date().toLocaleString('ko-KR'),
+                original_text: inputBox.value,
+                scores: results.scores,
+                total: results.total,
+                ai_advice: advice
+            };
 
             emptyState.style.opacity = '0';
             emptyState.style.pointerEvents = 'none';
@@ -405,30 +463,41 @@
         async function fetchGeminiAnalysis(text) {
             const prompt = `당신은 GEO 전문가입니다. 입력된 텍스트를 [통계, 인용, 구조, 전문성] 4개 지표로 분석하여 각각 0~100점 사이로 채점하고, 종합 조언(advice)을 포함해 반드시 JSON 형식 { "stat": 0, "cite": 0, "struct": 0, "prof": 0, "advice": "" }으로만 응답하세요.\n\n분석할 텍스트:\n${text}`;
             
-            const response = await fetch(GEMINI_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { responseMimeType: "application/json" }
-                })
-            });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                console.error('API Error Response:', errorData);
-                // Fallback to latest flash if 1.5-flash-latest also fails (API version changes over time)
-                if (response.status === 404) {
-                    throw new Error('MODEL_NOT_FOUND');
+            try {
+                const response = await fetch(GEMINI_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    console.error('API Error Response:', errorData);
+                    // Fallback to latest flash if 1.5-flash-latest also fails (API version changes over time)
+                    if (response.status === 404) {
+                        throw new Error('MODEL_NOT_FOUND');
+                    }
+                    throw new Error('API request failed');
                 }
-                throw new Error('API request failed');
+                const data = await response.json();
+                let resultText = data.candidates[0].content.parts[0].text;
+                
+                // Clean up Markdown JSON formatting if present
+                resultText = resultText.replace(/```json\s*/, '').replace(/```\s*$/, '').trim();
+                return JSON.parse(resultText);
+            } catch (error) {
+                clearTimeout(timeoutId);
+                throw error;
             }
-            const data = await response.json();
-            let resultText = data.candidates[0].content.parts[0].text;
-            
-            // Clean up Markdown JSON formatting if present
-            resultText = resultText.replace(/```json\s*/, '').replace(/```\s*$/, '').trim();
-            return JSON.parse(resultText);
         }
 
         // Event Listeners
@@ -473,17 +542,29 @@
                     // AI Mode
                     analyzeBtn.disabled = true;
                     analyzeBtn.classList.add('opacity-70', 'cursor-not-allowed');
-                    btnText.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> AI가 문맥을 읽는 중...';
+                    const spinnerHtml = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+                    btnText.innerHTML = `${spinnerHtml} AI가 문맥을 읽는 중...`;
+
+                    let delayMessageTimeout = setTimeout(() => {
+                        btnText.innerHTML = `${spinnerHtml} 응답이 늦어지고 있습니다, 잠시만 기다려주세요...`;
+                    }, 10000); // 10s delay message
 
                     try {
                         const jsonResult = await fetchGeminiAnalysis(text);
+                        clearTimeout(delayMessageTimeout);
+                        
                         const scores = [jsonResult.stat, jsonResult.cite, jsonResult.struct, jsonResult.prof];
                         const totalScore = Math.round(scores.reduce((a, b) => a + b, 0) / 4);
                         
                         updateUI({ scores, total: totalScore }, true, jsonResult.advice);
                     } catch (error) {
+                        clearTimeout(delayMessageTimeout);
                         console.error(error);
-                        alert("AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+                        if (error.name === 'AbortError') {
+                            alert("API 응답 시간이 초과되었습니다 (60초). 다시 시도해 주세요.");
+                        } else {
+                            alert("AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+                        }
                     } finally {
                         analyzeBtn.disabled = false;
                         analyzeBtn.classList.remove('opacity-70', 'cursor-not-allowed');
@@ -510,10 +591,30 @@
                 });
             });
 
-            // Save as PNG
-            document.getElementById('saveBtn').addEventListener('click', () => {
+            // Export Handlers
+            const savePngBtn = document.getElementById('savePngBtn');
+            const savePdfBtn = document.getElementById('savePdfBtn');
+            const saveJsonBtn = document.getElementById('saveJsonBtn');
+            
+            function setBtnLoading(btn, isLoading, originalText) {
+                if (isLoading) {
+                    btn.dataset.original = originalText;
+                    btn.disabled = true;
+                    btn.innerHTML = `<svg class="animate-spin h-4 w-4 mr-2 text-current inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 파일 생성 중...`;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = btn.dataset.original;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            }
+
+            savePngBtn.addEventListener('click', () => {
+                if (!currentReportData.scores) return alert('분석 결과가 없습니다.');
+                const originalHtml = savePngBtn.innerHTML;
+                setBtnLoading(savePngBtn, true, originalHtml);
+                
                 const panel = document.getElementById('resultPanel');
-                // Temporarily adjust styles for perfect capture
                 const origOverflow = panel.style.overflowY;
                 panel.style.overflowY = 'visible';
                 
@@ -527,7 +628,74 @@
                     link.download = `geo-analyzer-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 15)}.png`;
                     link.href = canvas.toDataURL('image/png');
                     link.click();
+                    setBtnLoading(savePngBtn, false);
                 });
+            });
+
+            savePdfBtn.addEventListener('click', async () => {
+                if (!currentReportData.scores) return alert('분석 결과가 없습니다.');
+                const originalHtml = savePdfBtn.innerHTML;
+                setBtnLoading(savePdfBtn, true, originalHtml);
+                
+                try {
+                    // Populate Template
+                    document.getElementById('pdfDate').textContent = currentReportData.timestamp;
+                    document.getElementById('pdfTotalScore').textContent = currentReportData.total;
+                    document.getElementById('pdfOriginalText').textContent = currentReportData.original_text || "입력된 텍스트가 없습니다.";
+                    document.getElementById('pdfAdviceText').innerHTML = currentReportData.ai_advice ? currentReportData.ai_advice.replace(/\n/g, '<br>') : '상세 AI 분석 가이드는 AI 정밀 분석 모드에서 제공됩니다.';
+                    
+                    const labels = ['통계 (Statistics)', '인용 (Citations)', '구조 (Structure)', '전문성 (Expertise)'];
+                    const colors = ['bg-sky-500', 'bg-orange-500', 'bg-rose-500', 'bg-indigo-500'];
+                    const scoreHtml = currentReportData.scores.map((score, idx) => `
+                        <div class="bg-white p-4 rounded-lg border border-gray-200">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-bold text-gray-700 text-sm">${labels[idx]}</span>
+                                <span class="font-black text-gray-900">${score}점</span>
+                            </div>
+                            <div class="w-full bg-gray-100 rounded-full h-2.5">
+                                <div class="${colors[idx]} h-2.5 rounded-full" style="width: ${score}%"></div>
+                            </div>
+                        </div>
+                    `).join('');
+                    document.getElementById('pdfScoreBars').innerHTML = scoreHtml;
+
+                    const template = document.getElementById('pdfTemplate');
+                    template.style.display = 'block';
+
+                    const canvas = await html2canvas(template, { scale: 2, backgroundColor: '#ffffff' });
+                    template.style.display = 'none';
+
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                    
+                    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+                    pdf.save(`geo-report-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 15)}.pdf`);
+                } catch (e) {
+                    console.error(e);
+                    alert("PDF 생성 중 오류가 발생했습니다.");
+                } finally {
+                    setBtnLoading(savePdfBtn, false);
+                }
+            });
+
+            saveJsonBtn.addEventListener('click', () => {
+                if (!currentReportData.scores) return alert('분석 결과가 없습니다.');
+                const originalHtml = saveJsonBtn.innerHTML;
+                setBtnLoading(saveJsonBtn, true, originalHtml);
+                
+                setTimeout(() => {
+                    const jsonStr = JSON.stringify(currentReportData, null, 2);
+                    const blob = new Blob([jsonStr], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `geo-data-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 15)}.json`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    setBtnLoading(saveJsonBtn, false);
+                }, 500); // Small delay for UX loading effect
             });
         });
     </script>
