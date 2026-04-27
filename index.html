@@ -70,33 +70,44 @@
             </div>
             
             <div class="relative flex-1 flex flex-col gap-4">
-                <textarea id="inputBox" class="w-full flex-1 bg-black/30 text-gray-100 rounded-xl p-6 resize-none focus:ring-1 focus:ring-sky-500/50 border border-white/5 text-[17px] leading-[1.8] placeholder-gray-600 font-light" placeholder="여기에 상품 소개, 광고 카피, 블로그 본문을 입력하거나 붙여넣으세요.&#10;분석하기 버튼을 누르면 설정된 모드에 따라 평가를 진행합니다."></textarea>
-                
-                <!-- Controls: AI Toggle and Button -->
-                <div class="flex items-center justify-between bg-black/20 p-4 rounded-xl border border-white/5">
-                    <label class="flex items-center cursor-pointer gap-3">
-                        <div class="relative">
-                            <input type="checkbox" id="aiToggle" class="sr-only">
-                            <div class="block bg-gray-700 w-12 h-7 rounded-full transition-colors duration-300" id="toggleBg"></div>
-                            <div class="dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition transform duration-300" id="toggleDot"></div>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="text-[14px] font-bold text-gray-300" id="aiLabel">AI 정밀 분석 비활성화</span>
-                            <span class="text-[12px] text-gray-500">Gemini 1.5 Flash 엔진</span>
-                        </div>
-                    </label>
-
-                    <button id="analyzeBtn" class="px-6 py-2.5 bg-sky-500 hover:bg-sky-400 text-white font-bold rounded-lg transition-all shadow-lg shadow-sky-500/20 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                        <span id="btnText">분석 실행하기</span>
-                    </button>
+                <div class="relative flex-1 flex flex-col">
+                    <textarea id="inputBox" class="w-full flex-1 bg-black/30 text-gray-100 rounded-xl p-6 pb-14 resize-none focus:ring-1 focus:ring-sky-500/50 border border-white/5 text-[17px] leading-[1.8] placeholder-gray-600 font-light" placeholder="여기에 상품 소개, 광고 카피, 블로그 본문을 입력하거나 붙여넣으세요.&#10;분석하기 버튼을 누르면 설정된 모드에 따라 평가를 진행합니다."></textarea>
+                    
+                    <!-- Test cases -->
+                    <div class="absolute bottom-4 right-4 flex gap-2">
+                        <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="good">우수 샘플</button>
+                        <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="structure">구조 샘플</button>
+                        <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="bad">미흡 샘플</button>
+                    </div>
                 </div>
                 
-                <!-- Test cases -->
-                <div class="absolute right-4 flex gap-2" style="bottom: 90px;">
-                    <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="good">우수 샘플</button>
-                    <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="structure">구조 샘플</button>
-                    <button class="px-3 py-1.5 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 test-btn text-xs text-gray-400 transition" data-type="bad">미흡 샘플</button>
+                <!-- Controls: AI Toggle and Button -->
+                <div class="flex flex-col gap-3 bg-black/20 p-4 rounded-xl border border-white/5">
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center cursor-pointer gap-3">
+                            <div class="relative">
+                                <input type="checkbox" id="aiToggle" class="sr-only">
+                                <div class="block bg-gray-700 w-12 h-7 rounded-full transition-colors duration-300" id="toggleBg"></div>
+                                <div class="dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition transform duration-300" id="toggleDot"></div>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-[14px] font-bold text-gray-300" id="aiLabel">AI 정밀 분석 비활성화</span>
+                                <span class="text-[12px] text-gray-500">Gemini 1.5 Flash 엔진</span>
+                            </div>
+                        </label>
+
+                        <button id="analyzeBtn" class="px-6 py-2.5 bg-sky-500 hover:bg-sky-400 text-white font-bold rounded-lg transition-all shadow-lg shadow-sky-500/20 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <span id="btnText">분석 실행하기</span>
+                        </button>
+                    </div>
+                    
+                    <div id="apiKeyContainer" class="hidden border-t border-white/5 pt-3 mt-1">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+                            <input type="password" id="apiKeyInput" placeholder="Gemini API 키를 입력하세요 (저장되지 않습니다)" class="flex-1 bg-black/40 text-gray-200 text-[13px] rounded-lg px-3 py-2 outline-none border border-white/10 focus:border-indigo-500/50 transition-colors">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -457,10 +468,13 @@
         }
 
         // Gemini API Configuration
-        const GEMINI_API_KEY = 'sorry';
-        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
-
         async function fetchGeminiAnalysis(text) {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            if (!apiKey) {
+                throw new Error('API_KEY_MISSING');
+            }
+            const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
+
             const prompt = `당신은 GEO 전문가입니다. 입력된 텍스트를 [통계, 인용, 구조, 전문성] 4개 지표로 분석하여 각각 0~100점 사이로 채점하고, 종합 조언(advice)을 포함해 반드시 JSON 형식 { "stat": 0, "cite": 0, "struct": 0, "prof": 0, "advice": "" }으로만 응답하세요.\n\n분석할 텍스트:\n${text}`;
             
             const controller = new AbortController();
@@ -515,18 +529,21 @@
 
             // Toggle AI Mode UI
             aiToggle.addEventListener('change', (e) => {
+                const apiKeyContainer = document.getElementById('apiKeyContainer');
                 if (e.target.checked) {
                     toggleBg.classList.replace('bg-gray-700', 'bg-indigo-500');
                     toggleDot.classList.add('translate-x-5');
                     aiLabel.textContent = 'AI 정밀 분석 활성화됨';
                     aiLabel.classList.replace('text-gray-300', 'text-indigo-400');
                     resultPanel.classList.add('neon-ai');
+                    apiKeyContainer.classList.remove('hidden');
                 } else {
                     toggleBg.classList.replace('bg-indigo-500', 'bg-gray-700');
                     toggleDot.classList.remove('translate-x-5');
                     aiLabel.textContent = 'AI 정밀 분석 비활성화';
                     aiLabel.classList.replace('text-indigo-400', 'text-gray-300');
                     resultPanel.classList.remove('neon-ai');
+                    apiKeyContainer.classList.add('hidden');
                 }
             });
 
@@ -560,10 +577,12 @@
                     } catch (error) {
                         clearTimeout(delayMessageTimeout);
                         console.error(error);
-                        if (error.name === 'AbortError') {
+                        if (error.message === 'API_KEY_MISSING') {
+                            alert("Gemini API 키를 입력해 주세요.");
+                        } else if (error.name === 'AbortError') {
                             alert("API 응답 시간이 초과되었습니다 (60초). 다시 시도해 주세요.");
                         } else {
-                            alert("AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+                            alert("AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요. (API 키가 유효한지 확인해주세요)");
                         }
                     } finally {
                         analyzeBtn.disabled = false;
